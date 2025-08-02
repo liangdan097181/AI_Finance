@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>进度条测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-md mx-auto">
+        <h1 class="text-2xl font-bold mb-6 text-center">进度条改进测试</h1>
+        
+        <button id="startBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg mb-4">
+            开始测试进度条
+        </button>
+        
+        <div id="progressContainer" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+                <div class="text-center">
+                    <!-- 加载动画 -->
+                    <div class="mb-6">
+                        <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto"></div>
+                    </div>
+                    
+                    <!-- 当前步骤 -->
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                        AI策略生成中
+                    </h3>
+                    
+                    <p id="stepText" class="text-gray-600 mb-6">
+                        正在分析市场数据...
+                    </p>
+                    
+                    <!-- 进度条 -->
+                    <div class="w-full bg-gray-200 rounded-full h-3 mb-4">
+                        <div id="progressBar" class="bg-blue-600 h-3 rounded-full transition-all duration-200 ease-out" style="width: 0%"></div>
+                    </div>
+                    
+                    <!-- 进度百分比 -->
+                    <p id="progressText" class="text-sm text-gray-500">
+                        0% 完成
+                    </p>
+                    
+                    <!-- 动态提示信息 -->
+                    <p id="hintText" class="text-xs text-gray-400 mt-4">
+                        正在为您分析最优投资组合，请稍候...
+                    </p>
+                    
+                    <!-- 额外的视觉反馈 -->
+                    <div id="finalizing" class="mt-3 justify-center hidden">
+                        <div class="flex space-x-1">
+                            <div class="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
+                            <div class="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                            <div class="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const steps = [
+            '正在分析市场数据...',
+            '获取股票实时价格...',
+            'AI正在分析投资策略...',
+            '计算投资组合配置...',
+            '生成历史回测数据...',
+            '完成策略生成...'
+        ];
+
+        let currentStep = 0;
+        let progress = 0;
+        let isNearComplete = false;
+        let startTime = 0;
+        let timer = null;
+
+        function updateProgress() {
+            const elapsed = Date.now() - startTime;
+            let newProgress = 0;
+            let stepIndex = 0;
+
+            if (elapsed < 3000) {
+                // 前3秒快速到30%
+                newProgress = (elapsed / 3000) * 30;
+                stepIndex = 0;
+            } else if (elapsed < 8000) {
+                // 3-8秒缓慢到70%
+                newProgress = 30 + ((elapsed - 3000) / 5000) * 40;
+                stepIndex = elapsed < 4000 ? 1 : 2;
+            } else if (elapsed < 12000) {
+                // 8-12秒到85%
+                newProgress = 70 + ((elapsed - 8000) / 4000) * 15;
+                stepIndex = 3;
+            } else if (elapsed < 20000) {
+                // 12-20秒缓慢到95%
+                newProgress = 85 + ((elapsed - 12000) / 8000) * 10;
+                stepIndex = 4;
+            } else {
+                // 20秒后保持在95-98%之间波动
+                const fluctuation = Math.sin((elapsed - 20000) / 1000) * 1.5;
+                newProgress = 96.5 + fluctuation;
+                stepIndex = 5;
+                isNearComplete = true;
+            }
+
+            progress = Math.min(newProgress, 98);
+            currentStep = Math.min(stepIndex, steps.length - 1);
+
+            // 更新UI
+            document.getElementById('progressBar').style.width = progress + '%';
+            document.getElementById('progressText').textContent = Math.round(progress) + '% 完成';
+            
+            if (isNearComplete) {
+                document.getElementById('stepText').textContent = '正在完成最后的策略优化...';
+                document.getElementById('hintText').textContent = '即将完成，请稍等片刻...';
+                document.getElementById('progressBar').className = 'h-3 rounded-full transition-all duration-200 ease-out bg-gradient-to-r from-blue-500 to-purple-600';
+                document.getElementById('finalizing').classList.remove('hidden');
+                document.getElementById('finalizing').classList.add('flex');
+            } else {
+                document.getElementById('stepText').textContent = steps[currentStep];
+                document.getElementById('hintText').textContent = '正在为您分析最优投资组合，请稍候...';
+            }
+
+            // 模拟在25秒后完成
+            if (elapsed > 25000) {
+                completeProgress();
+            }
+        }
+
+        function completeProgress() {
+            if (timer) {
+                clearInterval(timer);
+                timer = null;
+            }
+            
+            // 快速完成到100%
+            document.getElementById('progressBar').style.width = '100%';
+            document.getElementById('progressText').textContent = '100% 完成';
+            document.getElementById('stepText').textContent = '策略生成完成！';
+            
+            // 1秒后隐藏
+            setTimeout(() => {
+                document.getElementById('progressContainer').classList.add('hidden');
+                resetProgress();
+            }, 1000);
+        }
+
+        function resetProgress() {
+            progress = 0;
+            currentStep = 0;
+            isNearComplete = false;
+            document.getElementById('progressBar').className = 'bg-blue-600 h-3 rounded-full transition-all duration-200 ease-out';
+            document.getElementById('finalizing').classList.add('hidden');
+            document.getElementById('finalizing').classList.remove('flex');
+        }
+
+        function startTest() {
+            resetProgress();
+            startTime = Date.now();
+            document.getElementById('progressContainer').classList.remove('hidden');
+            
+            timer = setInterval(updateProgress, 100);
+        }
+
+        document.getElementById('startBtn').addEventListener('click', startTest);
+    </script>
+</body>
+</html>

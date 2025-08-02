@@ -1,0 +1,22 @@
+# Web框架
+Flask==3.1.1
+Flask-Cors==6.0.1
+
+# 数据处理
+pandas==2.3.1
+numpy==2.3.2
+
+# 金融数据
+akshare==1.17.26
+
+# HTTP请求
+requests==2.32.4
+
+# AI模型调用
+openai==1.98.0
+
+# 环境变量管理
+python-dotenv==1.1.1
+
+# 日期时间处理
+python-dateutil==2.8.2
