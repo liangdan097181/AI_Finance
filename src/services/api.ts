@@ -1,7 +1,9 @@
 import axios from 'axios';
 import { InvestmentPreferences, AIStrategyResponse, MarketIndex } from '../types';
 
-const API_BASE_URL = 'http://localhost:5004/api';
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? '/api'  // 生产环境使用相对路径，通过nginx代理
+  : 'http://localhost:5004/api';  // 开发环境使用本地地址
 
 // 获取市场指数数据（真实数据）
 export const getMarketIndices = async (): Promise<MarketIndex[]> => {

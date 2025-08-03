@@ -85,6 +85,34 @@ const PerformanceChart: React.FC<Props> = ({ data, recommendations }) => {
     return sortedData.slice(-monthRange);
   }, [dynamicData, monthRange]);
 
+  // 计算月度涨幅数据（每月相对于上月的涨幅）
+  const monthlyChangeData = useMemo(() => {
+    if (!filteredData || filteredData.length === 0) return [];
+    
+    return filteredData.map((currentData, index) => {
+      if (index === 0) {
+        // 第一个月，月度涨幅就是累计涨幅
+        const monthData: any = { month: currentData.month };
+        recommendations.forEach(stock => {
+          monthData[stock.symbol] = Number(currentData[stock.symbol]) || 0;
+        });
+        return monthData;
+      }
+      
+      // 计算相对于上个月的涨幅
+      const prevData = filteredData[index - 1];
+      const monthData: any = { month: currentData.month };
+      
+      recommendations.forEach(stock => {
+        const currentValue = Number(currentData[stock.symbol]) || 0;
+        const prevValue = Number(prevData[stock.symbol]) || 0;
+        monthData[stock.symbol] = currentValue - prevValue;
+      });
+      
+      return monthData;
+    });
+  }, [filteredData, recommendations]);
+
   // 生成颜色数组
   const colors = [
     '#3B82F6', // blue
@@ -146,21 +174,35 @@ const PerformanceChart: React.FC<Props> = ({ data, recommendations }) => {
     appearance: 'none'
   };
 
+  // 状态控制显示模式
+  const [showMonthlyChange, setShowMonthlyChange] = useState<boolean>(false);
+
   // 自定义工具提示
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-lg">
           <p className="font-semibold text-gray-900 mb-2">{label}</p>
+          <p className="text-xs text-gray-600 mb-2">
+            {showMonthlyChange ? '当月涨幅' : '累计涨幅'}
+          </p>
           {payload.map((entry: any, index: number) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
-              {entry.dataKey}: {entry.value.toFixed(2)}%
+              {entry.dataKey}: {entry.value > 0 ? '+' : ''}{entry.value.toFixed(2)}%
             </p>
           ))}
+          <p className="text-xs text-gray-500 mt-2 border-t pt-2">
+            点击图表切换显示模式
+          </p>
         </div>
       );
     }
     return null;
+  };
+
+  // 图表点击事件处理
+  const handleChartClick = () => {
+    setShowMonthlyChange(!showMonthlyChange);
   };
 
   return (
@@ -168,9 +210,17 @@ const PerformanceChart: React.FC<Props> = ({ data, recommendations }) => {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
           <BarChart3 className="w-8 h-8 text-purple-600 mr-3" />
-          <h2 className="text-3xl font-bold text-gray-900">
-            历史表现可视化
-          </h2>
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900">
+              历史表现可视化
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              当前显示: {showMonthlyChange ? '当月涨幅' : '累计涨幅'} 
+              <span className="ml-2 text-purple-600 cursor-pointer hover:underline" onClick={handleChartClick}>
+                (点击切换)
+              </span>
+            </p>
+          </div>
         </div>
         
         {/* 组合累计收益率显示区域 */}
@@ -203,7 +253,12 @@ const PerformanceChart: React.FC<Props> = ({ data, recommendations }) => {
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={filteredData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+            <LineChart 
+              data={showMonthlyChange ? monthlyChangeData : filteredData} 
+              margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+              onClick={handleChartClick}
+              style={{ cursor: 'pointer' }}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
               <XAxis 
                 dataKey="month" 
@@ -221,7 +276,7 @@ const PerformanceChart: React.FC<Props> = ({ data, recommendations }) => {
                 iconType="line"
               />
               
-              {/* 只显示各股票的累计收益率线 */}
+              {/* 显示各股票的收益率线（累计或月度） */}
               {recommendations.map((stock, index) => (
                 <Line
                   key={stock.symbol}
@@ -276,7 +331,8 @@ const PerformanceChart: React.FC<Props> = ({ data, recommendations }) => {
       </div>
 
       <div className="mt-6 text-center text-sm text-gray-600">
-        <p>* 图表显示各股票在选定时间范围内的累积收益率表现，括号内为配置权重</p>
+        <p>* 图表显示各股票的{showMonthlyChange ? '月度涨幅' : '累积收益率'}表现，括号内为配置权重</p>
+        <p className="mt-1 text-xs text-gray-500">点击图表可在累计涨幅和当月涨幅之间切换显示</p>
       </div>
       
       {/* 添加CSS样式到全局样式表或使用内联样式 */}
